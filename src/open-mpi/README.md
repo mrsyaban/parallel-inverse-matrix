@@ -12,5 +12,5 @@ Skema pembagian data yang digunakan di sini adalah pembagian matrix berdasarkan 
 
 ## How to use
 ```
-make run
+make mpi-run
 ```
