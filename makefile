@@ -6,6 +6,9 @@ all: serial parallel
 serial:
 	g++ src/serial/serial.cpp -o $(OUTPUT_FOLDER)/serial
 
+serial-time:
+	time $(OUTPUT_FOLDER)/serial < test_cases/2048.txt > res/cuda/2048.txt
+
 mpi:
 	mpic++ src/open-mpi/mpi.cpp -o $(OUTPUT_FOLDER)/parallel
 
@@ -17,3 +20,6 @@ cuda:
 
 cuda-run:
 	./bin/cuda < test_cases/32.txt > res/cuda/32.txt
+
+cuda-time:
+	time ./bin/cuda < test_cases/2048.txt > res/cuda/2048.txt

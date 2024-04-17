@@ -1,64 +1,93 @@
 #include <iostream>
 #include <cuda_runtime.h>
+using namespace std;
 
 
-__global__ void reduceToDiagonal(double *mat, int n) {
+__global__ void reduceToDiagonal(double *mat, int n, int i) {
+    int j = blockIdx.x * blockDim.x + threadIdx.x;
+    __syncthreads();
+    if (j < n) {
+        if (j != i) {
+            double d = mat[j * 2*n + i] / mat[i * 2*n + i];
+            for (int k = 0; k < 2*n; ++k) {
+                mat[j * 2*n + k] -= mat[i * 2*n + k] * d;
+            }
+            __syncthreads();        
+        }
+    }
 }
 
 __global__ void reduceToUnit(double *mat, int n) {
+    int i = blockIdx.x * blockDim.x + threadIdx.x;
+
+    __syncthreads();
+    if (i < n) {
+        double d = mat[i * 2 * n + i];
+        for (int j = 0; j < 2 * n; ++j) {
+            mat[i * 2*n + j] = mat[i * 2*n + j] / d;
+        }
+        __syncthreads();
+    }
 }
 
 int main() {
     int n;
-    std::cin >> n;
+    double *mat_host, *mat_device;
+    int mat_size = 2 * n * n * sizeof(double);
 
-    double *matHost, *matDevice;
-    int size = 2 * n * n * sizeof(double);
+    cin >> n;
 
-    matHost = new double[2 * n * n];
-    cudaMalloc((void **)&matDevice, size);
+    // Allocating memory for matrix host
+    mat_host = new double[2 * n * n];
 
     // Inputs the coefficients of the matrix
     for (int i = 0; i < n; ++i) {
         for (int j = 0; j < n; ++j) {
-            std::cin >> matHost[i * n + j];
+            cin >> mat_host[i * 2*n + j];
         }
     }
 
     // Initializing Right-hand side to identity matrix
     for (int i = 0; i < n; ++i) {
-        for (int j = 0; j < 2 * n; ++j) {
+        for (int j = n; j < 2*n; ++j) {
             if (j == (i + n)) {
-                matHost[i * 2 * n + j] = 1;
+                mat_host[i * 2*n + j] = 1;
             } else {
-                matHost[i * 2 * n + j] = 0;
+                mat_host[i * 2*n + j] = 0;
             }
         }
     }
 
-    cudaMemcpy(matDevice, matHost, size, cudaMemcpyHostToDevice);
+    // Allocating memory for matrix device
+    cudaMalloc((void **)&mat_device, mat_size);
 
-    int threadsPerBlock = 256;
-    int blocksPerGrid = (n + threadsPerBlock - 1) / threadsPerBlock;
+    cudaMemcpy(mat_device, mat_host, mat_size, cudaMemcpyHostToDevice);
 
-    // Reducing To Diagonal Matrix kernel
-    reduceToDiagonal<<<blocksPerGrid, threadsPerBlock>>>(matDevice, n);
+    dim3 blockShape = dim3(32);
+    dim3 gridShape = dim3(max(1.0, ceil((double) n / (double)blockShape.x)));
 
-    // Reducing To Unit Matrix kernel
-    reduceToUnit<<<blocksPerGrid, threadsPerBlock>>>(matDevice, n);
+    // Reducing To Diagonal Matrix
+    for(int i = 0; i < n; ++i)
+    {
+        reduceToDiagonal<<<gridShape, blockShape>>>(mat_device, n, i);
+    }
+    
+    // Reducing To Unit Matrix
+    reduceToUnit<<<gridShape, blockShape>>>(mat_device, n) ;
 
-    cudaMemcpy(matHost, matDevice, size, cudaMemcpyDeviceToHost);
+    cudaMemcpy(mat_host, mat_device, mat_size, cudaMemcpyDeviceToHost);
 
-    std::cout << n << std::endl;
+    cout << n << endl;
     for (int i = 0; i < n; ++i) {
         for (int j = n; j < 2 * n; ++j) {
-            std::cout << matHost[i * 2 * n + j] << " ";
+            cout << mat_host[i * 2 * n + j] << " ";
         }
-        std::cout << std::endl;
+        cout << endl;
     }
 
-    delete[] matHost;
-    cudaFree(matDevice);
+    // Deleting the memory allocated
+    delete[] mat_host;
+    cudaFree(mat_device);
 
     return 0;
 }
