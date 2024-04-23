@@ -1,14 +1,20 @@
-# Tugas Kecil - Paralel Inverse Matrix
+# Paralel Inverse Matrix
 
-Template Tugas Kecil IF3230 Sistem Paralel dan Terdistribusi
+> Make to fulfill Tugas Kecil IF3230 Sistem Paralel dan Terdistribusi
 
-## How to Run
+Parallelization of matrix inversioni using three different ways
 
-### Serial
+## Open MPI
+```
+make mpi-run
+```
 
-Contoh build, run, dan menyimpan output untuk test case `32.txt`.
+## Open MP
+```
+bin/mp < test_cases/1024.txt > res/mp/1024.txt
+```
 
-```console
-user@user:~/kit-tucil-sister-2024$ make
-user@user:~/kit-tucil-sister-2024$ cat ./test_cases/32.txt | ./bin/serial > 32.txt
+## Nvidia CUDA
+```
+make cuda-run
 ```
